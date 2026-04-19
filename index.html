@@ -3,243 +3,246 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IRON-LEDGER // V.1.0</title>
+    <title>IRON-LEDGER // DASHBOARD</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --bg: #0d0d0d;
-            --panel: #141414;
-            --accent: #00ff9d; /* Neon Cyber Green */
-            --text: #e0e0e0;
-            --border: #2a2a2a;
+            --bg: #1a1a1a;
+            --panel: #252525;
+            --input-bg: #1e1e1e;
+            --accent-green: #00e676;
+            --accent-red: #ff5252;
+            --text-main: #ffffff;
+            --text-dim: #a0a0a0;
         }
 
         body {
             background-color: var(--bg);
-            color: var(--text);
-            font-family: 'Courier New', Courier, monospace;
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
             margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .main-container {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        /* Sidebar / Wallet Section */
+        .sidebar {
+            width: 320px;
+            background: var(--panel);
+            padding: 25px;
+            border-radius: 12px;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-        }
-
-        header {
-            width: 100%;
-            padding: 20px;
-            text-align: center;
-            border-bottom: 2px solid var(--accent);
-            letter-spacing: 5px;
-            font-weight: bold;
-            text-transform: uppercase;
-            box-shadow: 0 0 15px rgba(0, 255, 157, 0.2);
-        }
-
-        .container {
-            width: 90%;
-            max-width: 1000px;
-            margin: 30px auto;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
             gap: 20px;
         }
 
-        .panel {
-            background: var(--panel);
-            border: 1px solid var(--border);
-            padding: 20px;
-            position: relative;
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        .panel::before {
-            content: "";
-            position: absolute;
-            top: 0; left: 0; width: 10px; height: 10px;
-            border-top: 2px solid var(--accent);
-            border-left: 2px solid var(--accent);
-        }
-
-        .full-width { grid-column: 1 / -1; }
-
-        h2 { font-size: 1rem; color: var(--accent); margin-bottom: 15px; }
-
-        input, select, button {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            background: #000;
-            border: 1px solid var(--border);
-            color: var(--accent);
-            outline: none;
-            box-sizing: border-box;
-        }
-
-        button {
-            border: 1px solid var(--accent);
+        .logout-btn {
+            background: transparent;
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+            padding: 5px 10px;
+            border-radius: 4px;
             cursor: pointer;
-            transition: 0.3s;
-            font-weight: bold;
-            text-transform: uppercase;
+            font-size: 0.8rem;
         }
 
-        button:hover {
-            background: var(--accent);
-            color: #000;
-            box-shadow: 0 0 20px var(--accent);
+        .wallet-card {
+            background: var(--input-bg);
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #333;
         }
 
-        #wallet-display { font-size: 1.2rem; }
-        .hidden { display: none; }
+        .currency-label { color: var(--text-dim); font-size: 0.9rem; }
+        .currency-value { font-weight: bold; letter-spacing: 1px; }
+
+        .trade-inputs label { font-size: 0.7rem; color: #666; text-transform: uppercase; display: block; margin-bottom: 5px; }
+
+        input, select {
+            width: 100%;
+            background: var(--input-bg);
+            border: 1px solid #333;
+            color: white;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .btn-group { display: flex; gap: 10px; }
+        .btn { flex: 1; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .buy { background: var(--accent-green); color: #000; }
+        .sell { background: var(--accent-red); color: #fff; }
+
+        /* Main Content Section */
+        .content { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+
+        .chart-panel, .history-panel {
+            background: var(--panel);
+            padding: 25px;
+            border-radius: 12px;
+        }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.85rem; }
+        th { text-align: left; color: #555; padding-bottom: 10px; border-bottom: 1px solid #333; }
+        td { padding: 12px 0; border-bottom: 1px solid #2a2a2a; }
+        .green { color: var(--accent-green); }
     </style>
 </head>
 <body>
 
-<header>IRON-LEDGER // CORE_ACCESS</header>
-
-<div id="auth-section" class="container">
-    <div class="panel full-width">
-        <h2>[USER_AUTHENTICATION]</h2>
-        <input type="text" id="username" placeholder="ID_IDENTIFIER">
-        <input type="password" id="password" placeholder="SECURE_KEY">
-        <div style="display: flex; gap: 10px;">
-            <button onclick="auth('login')">LOGIN</button>
-            <button onclick="auth('register')">REGISTER</button>
+<div class="main-container">
+    <div class="sidebar">
+        <div class="header-row">
+            <h3 id="user-title">Wallet (user)</h3>
+            <button class="logout-btn" onclick="logout()">Logout</button>
         </div>
-        <p id="auth-msg" style="font-size: 0.8rem; margin-top: 10px;"></p>
-    </div>
-</div>
 
-<div id="main-section" class="container hidden">
-    <div class="panel">
-        <h2>[WALLET_DATA]</h2>
-        <div id="wallet-display">SYNCING...</div>
-        <button onclick="logout()" style="margin-top: 20px; border-color: #ff3e3e; color: #ff3e3e;">DISCONNECT</button>
+        <div id="wallet-list">
+            <div class="wallet-card"><span class="currency-label">🇮🇳 INR</span><span class="currency-value">0.00</span></div>
+            <div class="wallet-card"><span class="currency-label">🇺🇸 USD</span><span class="currency-value">0.00</span></div>
+        </div>
+
+        <div class="trade-inputs">
+            <label>Amount</label>
+            <input type="number" id="trade-amount" placeholder="0.00">
+            
+            <label>Target Currency</label>
+            <select id="target-currency"></select>
+
+            <div class="btn-group">
+                <button class="btn buy" onclick="executeTrade('BUY')">BUY</button>
+                <button class="btn sell" onclick="executeTrade('SELL')">SELL</button>
+            </div>
+        </div>
     </div>
 
-    <div class="panel">
-        <h2>[TRANSACTION_ENTRY]</h2>
-        <select id="to-curr"></select>
-        <input type="number" id="amount" placeholder="VOLUME (USD)">
-        <button onclick="executeTrade()">COMMIT_TRANSACTION</button>
-    </div>
+    <div class="content">
+        <div class="chart-panel">
+            <canvas id="mainChart" height="150"></canvas>
+        </div>
 
-    <div class="panel full-width">
-        <h2>[MARKET_INDEX_STREAM]</h2>
-        <canvas id="marketChart" height="100"></canvas>
+        <div class="history-panel">
+            <h3>Recent Transactions</h3>
+            <table>
+                <thead>
+                    <tr><th>Time</th><th>Pair</th><th>Sold</th><th>Bought</th><th>Rate</th></tr>
+                </thead>
+                <tbody id="history-rows"></tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 <script>
-    // YOUR RAILWAY BACKEND URL
     const API_BASE = "https://currencytrader-production.up.railway.app";
-    
     let chart;
-    let chartData = { labels: [], datasets: [{ label: 'USD/INR', borderColor: '#00ff9d', data: [], tension: 0.3 }] };
 
     async function request(path, method = 'GET', body = null) {
-        const options = {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include' // Needed for cross-domain sessions
-        };
+        const options = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include' };
         if (body) options.body = JSON.stringify(body);
         return fetch(`${API_BASE}${path}`, options);
     }
 
-    async function auth(type) {
-        const u = document.getElementById('username').value;
-        const p = document.getElementById('password').value;
-        const res = await request(`/api/auth/${type}`, 'POST', { username: u, password: p });
-        if (res.ok) {
-            document.getElementById('auth-section').classList.add('hidden');
-            document.getElementById('main-section').classList.remove('hidden');
-            initDashboard();
+    async function init() {
+        // Fetch User Info
+        const me = await request('/api/auth/me');
+        if (!me.ok) { window.location.href = "login.html"; return; }
+        const userData = await me.json();
+        document.getElementById('user-title').innerText = `Wallet (${userData.username})`;
+
+        updateDashboard();
+        setInterval(updateDashboard, 5000);
+    }
+
+    async function updateDashboard() {
+        // 1. Update Wallet
+        const wRes = await request('/api/wallet');
+        const wallets = await wRes.json();
+        document.getElementById('wallet-list').innerHTML = wallets.map(w => `
+            <div class="wallet-card">
+                <span class="currency-label">${w.currency_code}</span>
+                <span class="currency-value">${parseFloat(w.balance).toFixed(2)}</span>
+            </div>
+        `).join('');
+
+        // 2. Update Rates & Chart
+        const rRes = await request('/api/rates');
+        const rates = await rRes.json();
+        if (rates.length > 0) updateChart(rates[0].rate);
+
+        // Populate dropdown once
+        const sel = document.getElementById('target-currency');
+        if (sel.options.length === 0) {
+            rates.forEach(r => {
+                let opt = document.createElement('option');
+                opt.value = r.to_currency; opt.text = `${r.to_currency} - Exchange`;
+                sel.add(opt);
+            });
+        }
+
+        // 3. Update History
+        const hRes = await request('/api/history');
+        const history = await hRes.json();
+        document.getElementById('history-rows').innerHTML = history.map(h => `
+            <tr>
+                <td>${new Date(h.created_at).toLocaleTimeString()}</td>
+                <td>${h.from_currency} → ${h.to_currency}</td>
+                <td>${parseFloat(h.amount).toFixed(2)}</td>
+                <td class="green">+${parseFloat(h.converted_amount).toFixed(2)}</td>
+                <td>${parseFloat(h.rate).toFixed(4)}</td>
+            </tr>
+        `).join('');
+    }
+
+    function updateChart(newRate) {
+        const time = new Date().toLocaleTimeString();
+        if (!chart) {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: [time], datasets: [{ 
+                    label: 'Market Rate', data: [newRate], 
+                    borderColor: '#00e676', backgroundColor: 'rgba(0, 230, 118, 0.1)', fill: true, tension: 0.4 
+                }]},
+                options: { responsive: true, plugins: { legend: { display: false } } }
+            });
         } else {
-            const data = await res.json();
-            document.getElementById('auth-msg').innerText = "ERROR: " + (data.error || "FAILED");
-        }
-    }
-
-    async function logout() {
-        await request('/api/auth/logout', 'POST');
-        location.reload();
-    }
-
-    function initDashboard() {
-        updateWallet();
-        updateRates();
-        initChart();
-        setInterval(updateRates, 5000); 
-    }
-
-    async function updateWallet() {
-        const res = await request('/api/wallet');
-        if (res.ok) {
-            const data = await res.json();
-            document.getElementById('wallet-display').innerHTML = data.map(w => 
-                `<div>> ${w.currency_code}: ${parseFloat(w.balance).toFixed(2)}</div>`
-            ).join('');
-        }
-    }
-
-    async function updateRates() {
-        const res = await request('/api/rates');
-        if (!res.ok) return;
-        const data = await res.json();
-        const toSelect = document.getElementById('to-curr');
-        
-        if (data.length > 0) {
-            const currentRate = parseFloat(data[0].rate);
-            if (chartData.labels.length > 10) {
-                chartData.labels.shift();
-                chartData.datasets[0].data.shift();
-            }
-            chartData.labels.push(new Date().toLocaleTimeString());
-            chartData.datasets[0].data.push(currentRate);
+            if (chart.data.labels.length > 15) { chart.data.labels.shift(); chart.data.datasets[0].data.shift(); }
+            chart.data.labels.push(time);
+            chart.data.datasets[0].data.push(newRate);
             chart.update();
-
-            if (toSelect.options.length === 0) {
-                data.forEach(r => {
-                    let opt = document.createElement('option');
-                    opt.value = r.to_currency;
-                    opt.innerHTML = "EXCHANGE TO: " + r.to_currency;
-                    toSelect.appendChild(opt);
-                });
-            }
         }
     }
 
-    async function executeTrade() {
-        const payload = {
-            from: 'USD',
-            to: document.getElementById('to-curr').value,
-            amount: document.getElementById('amount').value
-        };
-        const res = await request('/api/trade', 'POST', payload);
-        if (res.ok) {
-            alert("SUCCESS: DATA COMMITTED TO SUPABASE");
-            updateWallet();
-        } else {
-            const data = await res.json();
-            alert("FAILURE: " + data.error);
-        }
+    async function executeTrade(type) {
+        const amount = document.getElementById('trade-amount').value;
+        const to = document.getElementById('target-currency').value;
+        const res = await request('/api/trade', 'POST', { from: 'USD', to, amount });
+        if (res.ok) alert("Transaction Confirmed");
+        else alert("Transaction Failed");
+        updateDashboard();
     }
 
-    function initChart() {
-        const ctx = document.getElementById('marketChart').getContext('2d');
-        chart = new Chart(ctx, {
-            type: 'line',
-            data: chartData,
-            options: { 
-                scales: { 
-                    y: { grid: { color: '#222' }, ticks: { color: '#00ff9d' } },
-                    x: { ticks: { color: '#444' } }
-                },
-                plugins: { legend: { display: false } }
-            }
-        });
-    }
+    async function logout() { await request('/api/auth/logout', 'POST'); location.reload(); }
+
+    init();
 </script>
 </body>
 </html>
