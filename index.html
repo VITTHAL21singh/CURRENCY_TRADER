@@ -52,113 +52,189 @@
     </div>
 
     <script>
-        const API_BASE = "https://currencytrader-production.up.railway.app"; // Replace with your Railway URL
-        let isLogin = true;
-        let chart;
+        // --- CONFIGURATION ---
+const API_BASE = "https://currencytrader-production.up.railway.app";
+let isLoginMode = true; 
+let chart;
+let userWallet = [];
 
-        async function req(path, method = 'GET', body = null) {
-            const opt = { method, headers: {'Content-Type': 'application/json'}, credentials: 'include' };
-            if(body) opt.body = JSON.stringify(body);
-            return fetch(`${API_BASE}${path}`, opt);
-        }
-
-        function toggleAuth() { isLogin = !isLogin; document.getElementById('auth-title').innerText = isLogin ? "Login" : "Register"; }
-
-   async function handleAuth() {
-    // 1. Capture the input values
-    const u = document.getElementById('username').value;
-    const p = document.getElementById('password').value;
+// --- CORE REQUEST WRAPPER ---
+// This ensures every request sends cookies to Railway for the session
+async function req(path, method = 'GET', body = null) {
+    const options = {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include' 
+    };
+    if (body) options.body = JSON.stringify(body);
     
-    // 2. Determine the correct endpoint
-    const endpoint = isLoginMode ? '/api/auth/login' : '/api/auth/register';
-    
-    // 3. Construct the full URL
-    const fullUrl = `${API_BASE}${endpoint}`;
-
     try {
-        const res = await fetch(fullUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: u, password: p }),
-            credentials: 'include' 
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-            if (!isLoginMode) {
-                alert("IDENTITY CREATED. PROCEED TO ESTABLISH LINK.");
-                toggleAuthMode(); // Switch to login mode
-            } else {
-                checkSession(); // Log them in
-            }
-        } else {
-            // This pulls the error message you wrote in Flask (e.g., "Username exists")
-            alert("ALERT: " + (data.error || "Authentication failed"));
-        }
+        const response = await fetch(`${API_BASE}${path}`, options);
+        // Handle 401s specifically for the 'me' endpoint to avoid console spam
+        if (response.status === 401 && path === '/api/auth/me') return { ok: false };
+        return response;
     } catch (err) {
-        console.error("CONNECTION INTERRUPTED:", err);
-        alert("CRITICAL: Could not reach the core ledger.");
+        console.error("NETWORK ERROR:", err);
+        return { ok: false };
     }
 }
 
-        async function checkSession() {
-            const res = await req('/api/auth/me');
-            if(res.ok) {
-                const data = await res.json();
-                document.getElementById('user-display').innerText = data.username;
-                document.getElementById('auth-view').classList.add('hidden');
-                document.getElementById('app-view').classList.remove('hidden');
-                initApp();
-            }
-        }
+// --- AUTHENTICATION LOGIC ---
+function toggleAuthMode() {
+    isLoginMode = !isLoginMode;
+    document.getElementById('auth-title').innerText = isLoginMode ? "Login" : "Register";
+    document.querySelector('.toggle-auth').innerText = isLoginMode 
+        ? "Need an account? Register ($100 Bonus)" 
+        : "Already have an account? Login";
+}
 
-        function initApp() {
-            updateData();
-            initChart();
-            setInterval(updateData, 5000);
-        }
+async function handleAuth() {
+    const u = document.getElementById('username').value;
+    const p = document.getElementById('password').value;
+    
+    if (!u || !p) return alert("Please fill all fields.");
 
-        async function updateData() {
-            const [wRes, rRes, hRes] = await Promise.all([req('/api/wallet'), req('/api/rates'), req('/api/history')]);
-            if(wRes.ok) {
-                const wallets = await wRes.json();
-                document.getElementById('wallet-list').innerHTML = wallets.map(w => `<div class="wallet-card"><span>${w.flag} ${w.currency_code}</span><span>${parseFloat(w.balance).toFixed(2)}</span></div>`).join('');
-            }
-            if(rRes.ok) {
-                const rates = await rRes.json();
-                updateChart(rates[0].rate);
-                const sel = document.getElementById('target-curr');
-                if(sel.options.length === 0) {
-                    rates.forEach(r => { let o = document.createElement('option'); o.value = r.to_currency; o.text = r.to_currency; sel.add(o); });
-                }
-            }
-            if(hRes.ok) {
-                const history = await hRes.json();
-                document.getElementById('history-list').innerHTML = history.map(h => `<tr><td>${h.created_at}</td><td>${h.from_currency}➜${h.to_currency}</td><td>${parseFloat(h.amount).toFixed(2)}</td><td>+${parseFloat(h.converted_amount).toFixed(2)}</td><td>${parseFloat(h.rate).toFixed(4)}</td></tr>`).join('');
-            }
+    const endpoint = isLoginMode ? '/api/auth/login' : '/api/auth/register';
+    const res = await req(endpoint, 'POST', { username: u, password: p });
+    
+    if (res.ok) {
+        if (!isLoginMode) {
+            alert("Registration successful! Please login.");
+            toggleAuthMode();
+        } else {
+            checkSession(); 
         }
+    } else {
+        const data = await res.json();
+        alert("AUTH ERROR: " + (data.error || "Check credentials"));
+    }
+}
 
-        async function executeTrade() {
-            const to = document.getElementById('target-curr').value, amt = document.getElementById('trade-amt').value;
-            const res = await req('/api/trade', 'POST', {from: 'USD', to, amount: amt});
-            if(res.ok) updateData(); else alert("Trade Failed");
+async function checkSession() {
+    const res = await req('/api/auth/me');
+    if (res.ok) {
+        const data = await res.json();
+        document.getElementById('user-display').innerText = data.username;
+        document.getElementById('auth-view').classList.remove('active-view');
+        document.getElementById('app-view').classList.add('active-view');
+        initApp();
+    }
+}
+
+async function logout() {
+    await req('/api/auth/logout', 'POST');
+    location.reload();
+}
+
+// --- DASHBOARD LOGIC ---
+function initApp() {
+    initChart();
+    updateDashboard();
+    setInterval(updateDashboard, 5000); // Poll every 5 seconds
+}
+
+async function updateDashboard() {
+    // 1. Fetch Data
+    const [wRes, rRes, hRes] = await Promise.all([
+        req('/api/wallet'),
+        req('/api/rates'),
+        req('/api/history')
+    ]);
+
+    // 2. Render Wallet
+    if (wRes.ok) {
+        userWallet = await wRes.json();
+        document.getElementById('wallet-list').innerHTML = userWallet.map(w => `
+            <div class="wallet-item">
+                <span>${w.flag || '??'} ${w.currency_code}</span> 
+                <span>${parseFloat(w.balance).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+            </div>
+        `).join('');
+    }
+
+    // 3. Update Rates & Chart
+    if (rRes.ok) {
+        const rates = await rRes.json();
+        const target = document.getElementById('target-curr').value;
+        const currentRate = rates.find(r => r.to_currency === target)?.rate;
+        
+        if (currentRate) updateChart(currentRate);
+
+        // Populate Select if empty
+        const sel = document.getElementById('target-curr');
+        if (sel.options.length === 0) {
+            rates.forEach(r => {
+                let opt = document.createElement('option');
+                opt.value = r.to_currency;
+                opt.text = `${r.to_currency} - International`;
+                sel.add(opt);
+            });
         }
+    }
 
-        function initChart() {
-            const ctx = document.getElementById('marketChart').getContext('2d');
-            chart = new Chart(ctx, { type: 'line', data: { labels: [], datasets: [{ data: [], borderColor: '#00e676', tension: 0.4, fill: true, backgroundColor: 'rgba(0,230,118,0.1)' }] }, options: { plugins: { legend: { display: false } }, scales: { x: { display: false } } } });
+    // 4. Render History
+    if (hRes.ok) {
+        const history = await hRes.json();
+        document.getElementById('history-list').innerHTML = history.map(h => `
+            <tr>
+                <td>${h.created_at}</td>
+                <td>${h.from_currency} ➜ ${h.to_currency}</td>
+                <td>${parseFloat(h.amount).toFixed(2)}</td>
+                <td class="positive">+${parseFloat(h.converted_amount).toFixed(2)}</td>
+                <td>${parseFloat(h.rate).toFixed(4)}</td>
+            </tr>
+        `).join('');
+    }
+}
+
+async function executeTrade(type) {
+    const target = document.getElementById('target-curr').value;
+    const amount = document.getElementById('trade-amt').value;
+    
+    // Logic: BUY always means USD -> Target. SELL means Target -> USD
+    const tradeData = type === 'BUY' 
+        ? { from: 'USD', to: target, amount } 
+        : { from: target, to: 'USD', amount };
+
+    const res = await req('/api/trade', 'POST', tradeData);
+    if (res.ok) {
+        updateDashboard();
+    } else {
+        const data = await res.json();
+        alert("TRADE FAILED: " + data.error);
+    }
+}
+
+// --- CHART UTILS ---
+function initChart() {
+    const ctx = document.getElementById('marketChart').getContext('2d');
+    chart = new Chart(ctx, {
+        type: 'line',
+        data: { labels: [], datasets: [{ 
+            data: [], borderColor: '#00d26a', backgroundColor: 'rgba(0, 210, 106, 0.1)', 
+            fill: true, tension: 0.3, pointRadius: 2 
+        }]},
+        options: { 
+            responsive: true, maintainAspectRatio: false,
+            scales: { x: { display: false }, y: { grid: { color: '#333' } } },
+            plugins: { legend: { display: false } }
         }
+    });
+}
 
-        function updateChart(val) {
-            chart.data.labels.push("");
-            chart.data.datasets[0].data.push(val);
-            if(chart.data.labels.length > 20) { chart.data.labels.shift(); chart.data.datasets[0].data.shift(); }
-            chart.update();
-        }
+function updateChart(rate) {
+    const now = new Date().toLocaleTimeString();
+    chart.data.labels.push(now);
+    chart.data.datasets[0].data.push(rate);
+    if (chart.data.labels.length > 20) {
+        chart.data.labels.shift();
+        chart.data.datasets[0].data.shift();
+    }
+    chart.update('none');
+}
 
-        async function logout() { await req('/api/auth/logout', 'POST'); location.reload(); }
-        checkSession();
+// Boot the check
+checkSession();
     </script>
 </body>
 </html>
