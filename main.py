@@ -12,7 +12,8 @@ app.secret_key = os.getenv('SECRET_KEY', 'default_fallback_key_123')
 DATABASE_URL = os.getenv('DATABASE_URL')
 
 # Enable CORS: Allows your Vercel frontend to communicate with this Render API
-CORS(app, supports_credentials=True)
+# In your main.py on GitHub
+CORS(app, supports_credentials=True, origins=["https://currency-trader.vercel.app/"])
 
 # --- DATABASE CONNECTION ---
 def get_db_connection():
