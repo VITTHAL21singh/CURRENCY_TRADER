@@ -1,10 +1,12 @@
-DROP DATABASE IF EXISTS currency_db;
-CREATE DATABASE currency_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE currency_db;
+DROP TABLE IF EXISTS transactions;
+DROP TABLE IF EXISTS wallets;
+DROP TABLE IF EXISTS exchange_rates;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS currencies;
 
--- 1. Users Table (Authentication)
+-- 1. Users Table
 CREATE TABLE users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -20,36 +22,31 @@ CREATE TABLE currencies (
 
 -- 3. Exchange Rates
 CREATE TABLE exchange_rates (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    from_currency VARCHAR(3) NOT NULL,
-    to_currency VARCHAR(3) NOT NULL,
-    rate DECIMAL(18,8) NOT NULL,
-    FOREIGN KEY (from_currency) REFERENCES currencies(code),
-    FOREIGN KEY (to_currency) REFERENCES currencies(code)
+    id SERIAL PRIMARY KEY,
+    from_currency VARCHAR(3) NOT NULL REFERENCES currencies(code),
+    to_currency VARCHAR(3) NOT NULL REFERENCES currencies(code),
+    rate DECIMAL(18,8) NOT NULL
 );
 
--- 4. User Wallets (Tied to user_id)
+-- 4. User Wallets
 CREATE TABLE wallets (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    currency_code VARCHAR(3) NOT NULL,
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id),
+    currency_code VARCHAR(3) NOT NULL REFERENCES currencies(code),
     balance DECIMAL(18,4) DEFAULT 0.0000,
-    UNIQUE KEY unique_wallet (user_id, currency_code),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (currency_code) REFERENCES currencies(code)
+    CONSTRAINT unique_wallet UNIQUE (user_id, currency_code)
 );
 
--- 5. Transaction History (Tied to user_id)
+-- 5. Transaction History
 CREATE TABLE transactions (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id),
     from_currency VARCHAR(3) NOT NULL,
     to_currency VARCHAR(3) NOT NULL,
     amount DECIMAL(18,4) NOT NULL,
     converted_amount DECIMAL(18,6) NOT NULL,
     rate DECIMAL(18,8) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Seed Initial Data
