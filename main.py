@@ -7,17 +7,17 @@ from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
+# Security: Use an environment variable for the secret key
 app.secret_key = os.getenv('SECRET_KEY', 'cyber_trading_key_2026')
 
 # Allow Vercel to communicate with Railway
 CORS(app, supports_credentials=True)
-# main.py updates
 
 def get_db():
     try:
-        # Pulls from Railway Env Variables
+        # CRITICAL: Ensure this variable in Railway uses PORT 6543
         url = os.getenv('DATABASE_URL')
-        return psycopg2.connect(url, cursor_factory=RealDictCursor)
+        return psycopg2.connect(url, cursor_factory=RealDictCursor, connect_timeout=5)
     except Exception as e:
         print(f"DATABASE CONNECTION ERROR: {e}")
         return None
@@ -25,52 +25,42 @@ def get_db():
 @app.route('/api/auth/register', methods=['POST'])
 def register():
     data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    
+    if not username or not password:
+        return jsonify({'error': 'Missing fields'}), 400
+
     db = get_db()
     if db is None:
         return jsonify({'error': 'Database connection failed'}), 500
         
     cur = db.cursor()
     try:
-        hashed_pw = generate_password_hash(data.get('password'))
+        hashed_pw = generate_password_hash(password)
         cur.execute("INSERT INTO users (username, password_hash) VALUES (%s, %s) RETURNING id", 
-                    (data.get('username'), hashed_pw))
+                    (username, hashed_pw))
         user_id = cur.fetchone()['id']
         
         # Initial $100 bonus
         cur.execute("INSERT INTO wallets (user_id, currency_code, balance) VALUES (%s, 'USD', 100.00)", 
                     (user_id,))
         db.commit()
-        return jsonify({'message': 'Success'}), 201
+        return jsonify({'message': 'Registration successful'}), 201
     except Exception as e:
-        print(f"REGISTER ERROR: {e}") # This will show in Railway logs
+        print(f"REGISTER ERROR: {e}")
         db.rollback()
-        return jsonify({'error': str(e)}), 400
-    finally:
-        cur.close(); db.close()
-
-@app.route('/api/auth/register', methods=['POST'])
-def register():
-    data = request.json
-    username, password = data.get('username'), data.get('password')
-    if not username or not password: return jsonify({'error': 'Missing fields'}), 400
-
-    hashed_pw = generate_password_hash(password)
-    db = get_db(); cur = db.cursor()
-    try:
-        cur.execute("INSERT INTO users (username, password_hash) VALUES (%s, %s) RETURNING id", (username, hashed_pw))
-        user_id = cur.fetchone()['id']
-        cur.execute("INSERT INTO wallets (user_id, currency_code, balance) VALUES (%s, 'USD', 100.00)", (user_id,))
-        db.commit()
-        return jsonify({'message': 'Registration successful'})
-    except Exception as e:
-        return jsonify({'error': 'Username already exists'}), 400
+        return jsonify({'error': 'Username already exists or database error'}), 400
     finally:
         cur.close(); db.close()
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
     data = request.json
-    db = get_db(); cur = db.cursor()
+    db = get_db()
+    if not db: return jsonify({'error': 'DB Down'}), 500
+    
+    cur = db.cursor()
     cur.execute("SELECT * FROM users WHERE username=%s", (data.get('username'),))
     user = cur.fetchone()
     cur.close(); db.close()
@@ -93,10 +83,13 @@ def me():
 
 @app.route('/api/rates')
 def get_rates():
-    db = get_db(); cur = db.cursor()
+    db = get_db()
+    if not db: return jsonify([]), 500
+    cur = db.cursor()
     cur.execute("SELECT id, rate FROM exchange_rates")
     rows = cur.fetchall()
     for r in rows:
+        # Market Volatility Simulation
         new_rate = float(r['rate']) * random.uniform(0.998, 1.002)
         cur.execute("UPDATE exchange_rates SET rate=%s WHERE id=%s", (new_rate, r['id']))
     db.commit()
@@ -107,7 +100,9 @@ def get_rates():
 @app.route('/api/wallet')
 def get_wallet():
     if 'user_id' not in session: return jsonify({'error': 'Unauthorized'}), 401
-    db = get_db(); cur = db.cursor()
+    db = get_db()
+    if not db: return jsonify([]), 500
+    cur = db.cursor()
     cur.execute("""
         SELECT w.currency_code, w.balance, c.flag 
         FROM wallets w JOIN currencies c ON w.currency_code = c.code 
@@ -123,7 +118,10 @@ def trade():
     f_curr, t_curr, amt = data['from'], data['to'], float(data['amount'])
     user_id = session['user_id']
     
-    db = get_db(); cur = db.cursor()
+    db = get_db()
+    if not db: return jsonify({'error': 'DB Down'}), 500
+    cur = db.cursor()
+    
     cur.execute("SELECT balance FROM wallets WHERE user_id=%s AND currency_code=%s", (user_id, f_curr))
     bal = cur.fetchone()
     if not bal or float(bal['balance']) < amt: 
@@ -153,7 +151,9 @@ def trade():
 @app.route('/api/history')
 def get_history():
     if 'user_id' not in session: return jsonify([]), 401
-    db = get_db(); cur = db.cursor()
+    db = get_db()
+    if not db: return jsonify([]), 500
+    cur = db.cursor()
     cur.execute("SELECT * FROM transactions WHERE user_id=%s ORDER BY created_at DESC LIMIT 10", (session['user_id'],))
     res = cur.fetchall()
     for r in res: r['created_at'] = r['created_at'].strftime('%H:%M:%S')
