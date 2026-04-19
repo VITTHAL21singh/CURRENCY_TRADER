@@ -11,11 +11,42 @@ app.secret_key = os.getenv('SECRET_KEY', 'cyber_trading_key_2026')
 
 # Allow Vercel to communicate with Railway
 CORS(app, supports_credentials=True)
+# main.py updates
 
 def get_db():
-    # DATABASE_URL should be set in Railway/Render Env Variables
-    db_url = os.getenv('DATABASE_URL')
-    return psycopg2.connect(db_url, cursor_factory=RealDictCursor)
+    try:
+        # Pulls from Railway Env Variables
+        url = os.getenv('DATABASE_URL')
+        return psycopg2.connect(url, cursor_factory=RealDictCursor)
+    except Exception as e:
+        print(f"DATABASE CONNECTION ERROR: {e}")
+        return None
+
+@app.route('/api/auth/register', methods=['POST'])
+def register():
+    data = request.json
+    db = get_db()
+    if db is None:
+        return jsonify({'error': 'Database connection failed'}), 500
+        
+    cur = db.cursor()
+    try:
+        hashed_pw = generate_password_hash(data.get('password'))
+        cur.execute("INSERT INTO users (username, password_hash) VALUES (%s, %s) RETURNING id", 
+                    (data.get('username'), hashed_pw))
+        user_id = cur.fetchone()['id']
+        
+        # Initial $100 bonus
+        cur.execute("INSERT INTO wallets (user_id, currency_code, balance) VALUES (%s, 'USD', 100.00)", 
+                    (user_id,))
+        db.commit()
+        return jsonify({'message': 'Success'}), 201
+    except Exception as e:
+        print(f"REGISTER ERROR: {e}") # This will show in Railway logs
+        db.rollback()
+        return jsonify({'error': str(e)}), 400
+    finally:
+        cur.close(); db.close()
 
 @app.route('/api/auth/register', methods=['POST'])
 def register():
