@@ -11,7 +11,7 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'cyber_trading_key_2026')
 
 # Allow Vercel to communicate with Railway
-CORS(app, supports_credentials=True)
+CORS(app, supports_credentials=True, origins=["https://currency-trader.vercel.app/"])
 
 def get_db():
     try:
