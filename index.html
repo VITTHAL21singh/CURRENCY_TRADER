@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Currency Trader Pro | JIIT Noida</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { 
+            --bg: #1a1a1a; 
+            --panel: #2a2a2a; 
+            --accent: #00d26a; 
+            --danger: #ff4d4d;
+            --text: #fff; 
+        }
+        
+        body { 
+            margin: 0; 
+            background: var(--bg); 
+            color: var(--text); 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            overflow-x: hidden;
+        }
+        
+        /* View Management */
+        #auth-view, #app-view { display: none; min-height: 100vh; width: 100%; justify-content: center; align-items: center; }
+        .active-view { display: flex !important; }
+
+        /* Auth Panel */
+        .auth-box { background: var(--panel); padding: 40px; border-radius: 12px; width: 320px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .auth-box input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 6px; border: 1px solid #444; background: #111; color: white; box-sizing: border-box; }
+        .btn { background: var(--accent); color: #000; padding: 12px 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; transition: 0.2s; }
+        .btn:hover { opacity: 0.8; }
+        .toggle-auth { color: var(--accent); cursor: pointer; font-size: 12px; margin-top: 15px; display: block; }
+
+        /* Dashboard Layout */
+        .dashboard { 
+            width: 95vw; 
+            max-width: 1400px; 
+            height: 90vh; 
+            display: grid; 
+            grid-template-columns: 380px 1fr; 
+            gap: 25px; 
+        }
+        
+        .panel { background: var(--panel); border-radius: 16px; padding: 25px; overflow-y: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        
+        /* Wallet UI */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #444; padding-bottom: 15px; }
+        .wallet-item { display: flex; justify-content: space-between; background: #111; padding: 12px; margin-bottom: 10px; border-radius: 8px; font-family: 'Courier New', monospace; border-left: 3px solid var(--accent); }
+        
+        /* Trade Form */
+        .trade-form label { display: block; font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-top: 20px; margin-bottom: 8px; }
+        .trade-form select, .trade-form input { width: 100%; padding: 14px; border-radius: 8px; background: #111; color: white; border: 1px solid #444; box-sizing: border-box; font-size: 16px; }
+        
+        /* Chart & History */
+        .chart-container { height: 450px; margin-top: 20px; background: #111; padding: 20px; border-radius: 12px; border: 1px solid #333; }
+        
+        .history-table { width: 100%; text-align: left; border-collapse: collapse; margin-top: 25px; font-size: 13px; }
+        .history-table th { color: #888; padding-bottom: 12px; border-bottom: 1px solid #444; font-weight: 500; }
+        .history-table td { padding: 12px 0; border-bottom: 1px solid #333; }
+        .positive { color: var(--accent); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="auth-view" class="active-view">
+        <div class="auth-box">
+            <h2 id="auth-title">Login</h2>
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button class="btn" onclick="handleAuth()">Submit</button>
+            <span class="toggle-auth" onclick="toggleAuthMode()">Need an account? Register ($100 Bonus)</span>
+        </div>
+    </div>
+
+    <div id="app-view">
+        <div class="dashboard">
+            <div class="panel">
+                <div class="header">
+                    <h3 style="margin:0;">Wallet (<span id="user-display"></span>)</h3>
+                    <button style="background:transparent; border:1px solid var(--danger); color:var(--danger); cursor:pointer; padding:5px 10px; border-radius:4px;" onclick="logout()">Logout</button>
+                </div>
+                
+                <div id="wallet-list">Loading wallet data...</div>
+
+                <div class="trade-form">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                        <label>Amount</label>
+                        <span style="font-size:10px; color:var(--accent); cursor:pointer;" onclick="fillMax()">USE MAX</span>
+                    </div>
+                    <input type="number" id="trade-amt" value="10" min="1">
+
+                    <label>Target Currency</label>
+                    <select id="target-curr" onchange="resetChart()">
+                        <option value="INR">INR - Indian Rupee</option>
+                        <option value="EUR">EUR - Euro</option>
+                        <option value="GBP">GBP - British Pound</option>
+                        <option value="JPY">JPY - Japanese Yen</option>
+                    </select>
+
+                    <div style="display:flex; gap:12px; margin-top:25px;">
+                        <button class="btn" style="background:var(--accent);" onclick="executeTrade('BUY')">BUY</button>
+                        <button class="btn" style="background:var(--danger);" onclick="executeTrade('SELL')">SELL</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3 style="margin:0;">Live Market: <span id="pair-display" style="color:var(--accent)">USD / INR</span></h3>
+                <div class="chart-container">
+                    <canvas id="marketChart"></canvas>
+                </div>
+
+                <h3 style="margin-top: 40px; border-top: 1px solid #444; padding-top: 20px;">Recent Transactions</h3>
+                <table class="history-table">
+                    <thead>
+                        <tr><th>Time</th><th>Pair</th><th>Sold</th><th>Bought</th><th>Rate</th></tr>
+                    </thead>
+                    <tbody id="history-list"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isLoginMode = true;
+        let globalRates = [];
+        let pollInterval;
+        let chartInstance;
+        let userWallet = [];
+
+        // --- AUTHENTICATION ---
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('auth-title').innerText = isLoginMode ? "Login" : "Register";
+            document.querySelector('.toggle-auth').innerText = isLoginMode ? "Need an account? Register ($100 Bonus)" : "Already have an account? Login";
+        }
+
+        async function handleAuth() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            const endpoint = isLoginMode ? '/api/auth/login' : '/api/auth/register';
+            
+            const res = await fetch(endpoint, {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username: u, password: p})
+            });
+            const data = await res.json();
+            
+            if(res.ok) {
+                if(!isLoginMode) { alert("Registered! You received a $100 bonus. Please login."); toggleAuthMode(); }
+                else { checkSession(); }
+            } else alert(data.error);
+        }
+
+        async function logout() {
+            await fetch('/api/auth/logout', {method: 'POST'});
+            clearInterval(pollInterval);
+            location.reload();
+        }
+
+        async function checkSession() {
+            const res = await fetch('/api/auth/me');
+            if(res.ok) {
+                const data = await res.json();
+                document.getElementById('user-display').innerText = data.username;
+                document.getElementById('auth-view').classList.remove('active-view');
+                document.getElementById('app-view').classList.add('active-view');
+                initApp();
+            }
+        }
+
+        // --- CORE APPLICATION ---
+        function initApp() {
+            initChart();
+            fetchCoreData();
+            pollData();
+            pollInterval = setInterval(pollData, 5000);
+        }
+
+        async function fetchCoreData() {
+            const [walletRes, histRes] = await Promise.all([ fetch('/api/wallet'), fetch('/api/history') ]);
+            
+            if(walletRes.ok) {
+                userWallet = await walletRes.json();
+                document.getElementById('wallet-list').innerHTML = userWallet.map(w => 
+                    `<div class="wallet-item"><span>${w.flag} ${w.currency_code}</span> <span>${parseFloat(w.balance).toLocaleString(undefined, {minimumFractionDigits: 2})}</span></div>`
+                ).join('');
+            }
+
+            if(histRes.ok) {
+                const history = await histRes.json();
+                document.getElementById('history-list').innerHTML = history.map(h => `
+                    <tr>
+                        <td>${h.created_at}</td>
+                        <td>${h.from_currency} ➜ ${h.to_currency}</td>
+                        <td>${parseFloat(h.amount).toFixed(2)}</td>
+                        <td class="positive">+${parseFloat(h.converted_amount).toFixed(2)}</td>
+                        <td>${parseFloat(h.rate).toFixed(4)}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        async function pollData() {
+            const res = await fetch('/api/rates');
+            if(res.ok) {
+                globalRates = await res.json();
+                updateChart();
+            }
+            fetchCoreData();
+        }
+
+        async function executeTrade(type) {
+            const target = document.getElementById('target-curr').value;
+            const amount = document.getElementById('trade-amt').value;
+            const tradeData = type === 'BUY' ? { from: 'USD', to: target, amount } : { from: target, to: 'USD', amount };
+
+            const res = await fetch('/api/trade', {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(tradeData)
+            });
+            const result = await res.json();
+            if(res.ok) fetchCoreData();
+            else alert(result.error);
+        }
+
+        function fillMax() {
+            const target = document.getElementById('target-curr').value;
+            const usd = userWallet.find(w => w.currency_code === 'USD');
+            if(usd) document.getElementById('trade-amt').value = Math.floor(usd.balance);
+        }
+
+        // --- CHART LOGIC ---
+        function initChart() {
+            const ctx = document.getElementById('marketChart').getContext('2d');
+            if(chartInstance) chartInstance.destroy();
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: { labels: [], datasets: [{ label: 'Rate', data: [], borderColor: '#00d26a', backgroundColor: 'rgba(0, 210, 106, 0.1)', tension: 0.3, fill: true, pointRadius: 2 }] },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    scales: { 
+                        x: { grid: { display: false }, ticks: { color: '#555' } }, 
+                        y: { grid: { color: '#333' }, ticks: { color: '#aaa' } } 
+                    }, 
+                    plugins: { legend: { display: false } } 
+                }
+            });
+        }
+
+        function resetChart() {
+            chartInstance.data.labels = [];
+            chartInstance.data.datasets[0].data = [];
+            chartInstance.update();
+            updateChart();
+        }
+
+        function updateChart() {
+            const from = "USD";
+            const to = document.getElementById('target-curr').value;
+            document.getElementById('pair-display').innerText = `${from} / ${to}`;
+
+            let rateObj = globalRates.find(r => r.from_currency === from && r.to_currency === to);
+            let rate = rateObj ? parseFloat(rateObj.rate) : 0;
+
+            if(rate > 0) {
+                const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                chartInstance.data.labels.push(now);
+                chartInstance.data.datasets[0].data.push(rate);
+                if(chartInstance.data.labels.length > 20) {
+                    chartInstance.data.labels.shift();
+                    chartInstance.data.datasets[0].data.shift();
+                }
+                chartInstance.update('none'); // Update without animation for smoothness
+            }
+        }
+
+        checkSession();
+    </script>
+</body>
+</html>
