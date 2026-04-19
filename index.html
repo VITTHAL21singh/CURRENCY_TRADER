@@ -3,22 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IRON-LEDGER // SECURE EXCHANGE</title>
+    <title>IRON-LEDGER // V.1.0</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --bg: #050505;
-            --panel: rgba(15, 15, 18, 0.9);
-            --accent: #00d4ff; /* Tech Blue */
-            --text: #ffffff;
-            --border: #222;
-            --danger: #ff3e3e;
+            --bg: #0d0d0d;
+            --panel: #141414;
+            --accent: #00ff9d; /* Neon Cyber Green */
+            --text: #e0e0e0;
+            --border: #2a2a2a;
         }
 
         body {
             background-color: var(--bg);
             color: var(--text);
-            font-family: 'Consolas', 'Courier New', monospace;
+            font-family: 'Courier New', Courier, monospace;
             margin: 0;
             display: flex;
             flex-direction: column;
@@ -28,42 +27,42 @@
 
         header {
             width: 100%;
-            padding: 25px;
+            padding: 20px;
             text-align: center;
-            border-bottom: 2px solid var(--border);
-            letter-spacing: 6px;
+            border-bottom: 2px solid var(--accent);
+            letter-spacing: 5px;
             font-weight: bold;
-            color: var(--accent);
-            background: linear-gradient(180deg, #111 0%, #050505 100%);
+            text-transform: uppercase;
+            box-shadow: 0 0 15px rgba(0, 255, 157, 0.2);
         }
 
         .container {
-            width: 95%;
-            max-width: 1100px;
+            width: 90%;
+            max-width: 1000px;
             margin: 30px auto;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 25px;
+            gap: 20px;
         }
 
         .panel {
             background: var(--panel);
             border: 1px solid var(--border);
-            padding: 25px;
-            border-radius: 2px; /* Sharp corners for IRON feel */
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            padding: 20px;
+            position: relative;
+        }
+
+        .panel::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 10px; height: 10px;
+            border-top: 2px solid var(--accent);
+            border-left: 2px solid var(--accent);
         }
 
         .full-width { grid-column: 1 / -1; }
 
-        h2 { 
-            text-transform: uppercase; 
-            font-size: 0.9rem; 
-            margin-bottom: 20px; 
-            color: #888; 
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 10px;
-        }
+        h2 { font-size: 1rem; color: var(--accent); margin-bottom: 15px; }
 
         input, select, button {
             width: 100%;
@@ -73,78 +72,76 @@
             border: 1px solid var(--border);
             color: var(--accent);
             outline: none;
+            box-sizing: border-box;
         }
 
         button {
-            background: rgba(0, 212, 255, 0.05);
             border: 1px solid var(--accent);
             cursor: pointer;
-            transition: all 0.2s;
+            transition: 0.3s;
             font-weight: bold;
-            letter-spacing: 2px;
+            text-transform: uppercase;
         }
 
         button:hover {
             background: var(--accent);
             color: #000;
+            box-shadow: 0 0 20px var(--accent);
         }
 
-        #wallet-display { font-size: 1.2rem; color: var(--accent); }
-        
+        #wallet-display { font-size: 1.2rem; }
         .hidden { display: none; }
     </style>
 </head>
 <body>
 
-<header>IRON-LEDGER // ENCRYPTED_TRADING_NODE</header>
+<header>IRON-LEDGER // CORE_ACCESS</header>
 
 <div id="auth-section" class="container">
     <div class="panel full-width">
-        <h2>AUTHENTICATION_REQUIRED</h2>
-        <input type="text" id="username" placeholder="IDENTIFIER">
-        <input type="password" id="password" placeholder="SECURITY_KEY">
-        <div style="display: flex; gap: 15px;">
-            <button onclick="auth('login')">ESTABLISH_LINK</button>
-            <button onclick="auth('register')">CREATE_IDENTITY</button>
+        <h2>[USER_AUTHENTICATION]</h2>
+        <input type="text" id="username" placeholder="ID_IDENTIFIER">
+        <input type="password" id="password" placeholder="SECURE_KEY">
+        <div style="display: flex; gap: 10px;">
+            <button onclick="auth('login')">LOGIN</button>
+            <button onclick="auth('register')">REGISTER</button>
         </div>
-        <p id="auth-msg" style="color: var(--danger); font-size: 0.8rem;"></p>
+        <p id="auth-msg" style="font-size: 0.8rem; margin-top: 10px;"></p>
     </div>
 </div>
 
 <div id="main-section" class="container hidden">
     <div class="panel">
-        <h2>LEDGER_BALANCE</h2>
-        <div id="wallet-display">SYNCHRONIZING...</div>
-        <button onclick="logout()" style="margin-top: 30px; border-color: var(--danger); color: var(--danger);">TERMINATE_SESSION</button>
+        <h2>[WALLET_DATA]</h2>
+        <div id="wallet-display">SYNCING...</div>
+        <button onclick="logout()" style="margin-top: 20px; border-color: #ff3e3e; color: #ff3e3e;">DISCONNECT</button>
     </div>
 
     <div class="panel">
-        <h2>EXECUTE_TRANSACTION</h2>
-        <label style="font-size: 0.7rem; color: #555;">SOURCE</label>
-        <select id="from-curr"><option value="USD">USD</option></select>
-        <label style="font-size: 0.7rem; color: #555;">DESTINATION</label>
+        <h2>[TRANSACTION_ENTRY]</h2>
         <select id="to-curr"></select>
-        <input type="number" id="amount" placeholder="VOLUME">
-        <button onclick="executeTrade()">COMMIT_TO_LEDGER</button>
+        <input type="number" id="amount" placeholder="VOLUME (USD)">
+        <button onclick="executeTrade()">COMMIT_TRANSACTION</button>
     </div>
 
     <div class="panel full-width">
-        <h2>MARKET_VOLATILITY_MONITOR</h2>
+        <h2>[MARKET_INDEX_STREAM]</h2>
         <canvas id="marketChart" height="100"></canvas>
     </div>
 </div>
 
 <script>
+    // YOUR RAILWAY BACKEND URL
     const API_BASE = "https://currencytrader-production.up.railway.app";
     
     let chart;
-    let chartData = { labels: [], datasets: [{ label: 'USD/INR INDEX', borderColor: '#00d4ff', data: [], tension: 0.1 }] };
+    let chartData = { labels: [], datasets: [{ label: 'USD/INR', borderColor: '#00ff9d', data: [], tension: 0.3 }] };
 
     async function request(path, method = 'GET', body = null) {
         const options = {
             method,
             headers: { 'Content-Type': 'application/json' },
-            credentials: 'include'
+            credentials: 'include' // Needed for cross-domain sessions
         };
         if (body) options.body = JSON.stringify(body);
         return fetch(`${API_BASE}${path}`, options);
@@ -154,14 +151,13 @@
         const u = document.getElementById('username').value;
         const p = document.getElementById('password').value;
         const res = await request(`/api/auth/${type}`, 'POST', { username: u, password: p });
-        const data = await res.json();
-        
         if (res.ok) {
             document.getElementById('auth-section').classList.add('hidden');
             document.getElementById('main-section').classList.remove('hidden');
             initDashboard();
         } else {
-            document.getElementById('auth-msg').innerText = "ALERT: " + (data.error || data.message);
+            const data = await res.json();
+            document.getElementById('auth-msg').innerText = "ERROR: " + (data.error || "FAILED");
         }
     }
 
@@ -179,25 +175,27 @@
 
     async function updateWallet() {
         const res = await request('/api/wallet');
-        const data = await res.json();
-        const display = document.getElementById('wallet-display');
-        display.innerHTML = data.map(w => `<div>[${w.currency_code}] >> ${parseFloat(w.balance).toFixed(2)}</div>`).join('');
+        if (res.ok) {
+            const data = await res.json();
+            document.getElementById('wallet-display').innerHTML = data.map(w => 
+                `<div>> ${w.currency_code}: ${parseFloat(w.balance).toFixed(2)}</div>`
+            ).join('');
+        }
     }
 
     async function updateRates() {
         const res = await request('/api/rates');
+        if (!res.ok) return;
         const data = await res.json();
         const toSelect = document.getElementById('to-curr');
         
         if (data.length > 0) {
             const currentRate = parseFloat(data[0].rate);
-            const time = new Date().toLocaleTimeString();
-            
-            if (chartData.labels.length > 15) {
+            if (chartData.labels.length > 10) {
                 chartData.labels.shift();
                 chartData.datasets[0].data.shift();
             }
-            chartData.labels.push(time);
+            chartData.labels.push(new Date().toLocaleTimeString());
             chartData.datasets[0].data.push(currentRate);
             chart.update();
 
@@ -205,7 +203,7 @@
                 data.forEach(r => {
                     let opt = document.createElement('option');
                     opt.value = r.to_currency;
-                    opt.innerHTML = r.to_currency;
+                    opt.innerHTML = "EXCHANGE TO: " + r.to_currency;
                     toSelect.appendChild(opt);
                 });
             }
@@ -214,13 +212,13 @@
 
     async function executeTrade() {
         const payload = {
-            from: document.getElementById('from-curr').value,
+            from: 'USD',
             to: document.getElementById('to-curr').value,
             amount: document.getElementById('amount').value
         };
         const res = await request('/api/trade', 'POST', payload);
         if (res.ok) {
-            alert("SUCCESS: TRANSACTION SEALED IN LEDGER");
+            alert("SUCCESS: DATA COMMITTED TO SUPABASE");
             updateWallet();
         } else {
             const data = await res.json();
@@ -234,11 +232,11 @@
             type: 'line',
             data: chartData,
             options: { 
-                plugins: { legend: { display: false } },
                 scales: { 
-                    y: { grid: { color: '#111' }, ticks: { color: '#444' } },
-                    x: { grid: { display: false }, ticks: { color: '#444' } }
-                } 
+                    y: { grid: { color: '#222' }, ticks: { color: '#00ff9d' } },
+                    x: { ticks: { color: '#444' } }
+                },
+                plugins: { legend: { display: false } }
             }
         });
     }
