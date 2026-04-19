@@ -64,13 +64,43 @@
 
         function toggleAuth() { isLogin = !isLogin; document.getElementById('auth-title').innerText = isLogin ? "Login" : "Register"; }
 
-        async function handleAuth() {
-            const u = document.getElementById('username').value, p = document.getElementById('password').value;
-            const path = isLogin ? '/api/auth/login' : '/api/auth/register';
-            const res = await req(path, 'POST', {username: u, password: p});
-            if(res.ok) { if(!isLogin) toggleAuth(); else checkSession(); }
-            else alert("Error in Auth");
+   async function handleAuth() {
+    // 1. Capture the input values
+    const u = document.getElementById('username').value;
+    const p = document.getElementById('password').value;
+    
+    // 2. Determine the correct endpoint
+    const endpoint = isLoginMode ? '/api/auth/login' : '/api/auth/register';
+    
+    // 3. Construct the full URL
+    const fullUrl = `${API_BASE}${endpoint}`;
+
+    try {
+        const res = await fetch(fullUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: u, password: p }),
+            credentials: 'include' 
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            if (!isLoginMode) {
+                alert("IDENTITY CREATED. PROCEED TO ESTABLISH LINK.");
+                toggleAuthMode(); // Switch to login mode
+            } else {
+                checkSession(); // Log them in
+            }
+        } else {
+            // This pulls the error message you wrote in Flask (e.g., "Username exists")
+            alert("ALERT: " + (data.error || "Authentication failed"));
         }
+    } catch (err) {
+        console.error("CONNECTION INTERRUPTED:", err);
+        alert("CRITICAL: Could not reach the core ledger.");
+    }
+}
 
         async function checkSession() {
             const res = await req('/api/auth/me');
