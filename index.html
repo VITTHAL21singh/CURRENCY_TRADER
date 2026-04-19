@@ -3,246 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IRON-LEDGER // DASHBOARD</title>
+    <title>IRON-LEDGER</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root {
-            --bg: #1a1a1a;
-            --panel: #252525;
-            --input-bg: #1e1e1e;
-            --accent-green: #00e676;
-            --accent-red: #ff5252;
-            --text-main: #ffffff;
-            --text-dim: #a0a0a0;
-        }
-
-        body {
-            background-color: var(--bg);
-            color: var(--text-main);
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-        }
-
-        .main-container {
-            display: flex;
-            gap: 20px;
-            width: 100%;
-            max-width: 1200px;
-        }
-
-        /* Sidebar / Wallet Section */
-        .sidebar {
-            width: 320px;
-            background: var(--panel);
-            padding: 25px;
-            border-radius: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .header-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logout-btn {
-            background: transparent;
-            border: 1px solid var(--accent-red);
-            color: var(--accent-red);
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
-
-        .wallet-card {
-            background: var(--input-bg);
-            padding: 15px;
-            border-radius: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border: 1px solid #333;
-        }
-
-        .currency-label { color: var(--text-dim); font-size: 0.9rem; }
-        .currency-value { font-weight: bold; letter-spacing: 1px; }
-
-        .trade-inputs label { font-size: 0.7rem; color: #666; text-transform: uppercase; display: block; margin-bottom: 5px; }
-
-        input, select {
-            width: 100%;
-            background: var(--input-bg);
-            border: 1px solid #333;
-            color: white;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 15px;
-        }
-
-        .btn-group { display: flex; gap: 10px; }
-        .btn { flex: 1; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        .buy { background: var(--accent-green); color: #000; }
-        .sell { background: var(--accent-red); color: #fff; }
-
-        /* Main Content Section */
-        .content { flex: 1; display: flex; flex-direction: column; gap: 20px; }
-
-        .chart-panel, .history-panel {
-            background: var(--panel);
-            padding: 25px;
-            border-radius: 12px;
-        }
-
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.85rem; }
-        th { text-align: left; color: #555; padding-bottom: 10px; border-bottom: 1px solid #333; }
-        td { padding: 12px 0; border-bottom: 1px solid #2a2a2a; }
-        .green { color: var(--accent-green); }
+        :root { --bg: #121212; --panel: #1e1e1e; --accent: #00e676; --text: #fff; }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .dashboard { display: grid; grid-template-columns: 350px 1fr; gap: 20px; width: 100%; max-width: 1200px; }
+        .sidebar, .main { background: var(--panel); padding: 25px; border-radius: 12px; }
+        .wallet-card { background: #252525; padding: 15px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; border-left: 4px solid var(--accent); }
+        input, select, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 6px; border: 1px solid #333; background: #111; color: #fff; }
+        button { background: var(--accent); color: #000; font-weight: bold; cursor: pointer; border: none; }
+        #auth-view { display: flex; flex-direction: column; width: 300px; }
+        .hidden { display: none !important; }
+        table { width: 100%; text-align: left; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+        th { color: #666; padding-bottom: 10px; border-bottom: 1px solid #333; }
+        td { padding: 10px 0; border-bottom: 1px solid #222; }
     </style>
 </head>
 <body>
 
-<div class="main-container">
-    <div class="sidebar">
-        <div class="header-row">
-            <h3 id="user-title">Wallet (user)</h3>
-            <button class="logout-btn" onclick="logout()">Logout</button>
-        </div>
-
-        <div id="wallet-list">
-            <div class="wallet-card"><span class="currency-label">🇮🇳 INR</span><span class="currency-value">0.00</span></div>
-            <div class="wallet-card"><span class="currency-label">🇺🇸 USD</span><span class="currency-value">0.00</span></div>
-        </div>
-
-        <div class="trade-inputs">
-            <label>Amount</label>
-            <input type="number" id="trade-amount" placeholder="0.00">
-            
-            <label>Target Currency</label>
-            <select id="target-currency"></select>
-
-            <div class="btn-group">
-                <button class="btn buy" onclick="executeTrade('BUY')">BUY</button>
-                <button class="btn sell" onclick="executeTrade('SELL')">SELL</button>
-            </div>
-        </div>
+    <div id="auth-view">
+        <h2 id="auth-title">Login</h2>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="handleAuth()">Submit</button>
+        <p onclick="toggleAuth()" style="font-size: 12px; cursor: pointer; color: var(--accent); text-align: center;">Toggle Register/Login</p>
     </div>
 
-    <div class="content">
-        <div class="chart-panel">
-            <canvas id="mainChart" height="150"></canvas>
+    <div id="app-view" class="dashboard hidden">
+        <div class="sidebar">
+            <h3>Wallet (<span id="user-display"></span>)</h3>
+            <div id="wallet-list"></div>
+            <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
+            <input type="number" id="trade-amt" value="10">
+            <select id="target-curr"></select>
+            <button onclick="executeTrade()">Confirm Trade</button>
+            <button onclick="logout()" style="background: transparent; border: 1px solid #ff5252; color: #ff5252; margin-top: 20px;">Logout</button>
         </div>
-
-        <div class="history-panel">
+        <div class="main">
+            <h3>Market: USD / <span id="pair-name">INR</span></h3>
+            <canvas id="marketChart" height="150"></canvas>
             <h3>Recent Transactions</h3>
             <table>
-                <thead>
-                    <tr><th>Time</th><th>Pair</th><th>Sold</th><th>Bought</th><th>Rate</th></tr>
-                </thead>
-                <tbody id="history-rows"></tbody>
+                <thead><tr><th>Time</th><th>Pair</th><th>Sold</th><th>Bought</th><th>Rate</th></tr></thead>
+                <tbody id="history-list"></tbody>
             </table>
         </div>
     </div>
-</div>
 
-<script>
-    const API_BASE = "https://currencytrader-production.up.railway.app";
-    let chart;
+    <script>
+        const API_BASE = "https://currencytrader-production.up.railway.app"; // Replace with your Railway URL
+        let isLogin = true;
+        let chart;
 
-    async function request(path, method = 'GET', body = null) {
-        const options = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include' };
-        if (body) options.body = JSON.stringify(body);
-        return fetch(`${API_BASE}${path}`, options);
-    }
-
-    async function init() {
-        // Fetch User Info
-        const me = await request('/api/auth/me');
-        if (!me.ok) { window.location.href = "login.html"; return; }
-        const userData = await me.json();
-        document.getElementById('user-title').innerText = `Wallet (${userData.username})`;
-
-        updateDashboard();
-        setInterval(updateDashboard, 5000);
-    }
-
-    async function updateDashboard() {
-        // 1. Update Wallet
-        const wRes = await request('/api/wallet');
-        const wallets = await wRes.json();
-        document.getElementById('wallet-list').innerHTML = wallets.map(w => `
-            <div class="wallet-card">
-                <span class="currency-label">${w.currency_code}</span>
-                <span class="currency-value">${parseFloat(w.balance).toFixed(2)}</span>
-            </div>
-        `).join('');
-
-        // 2. Update Rates & Chart
-        const rRes = await request('/api/rates');
-        const rates = await rRes.json();
-        if (rates.length > 0) updateChart(rates[0].rate);
-
-        // Populate dropdown once
-        const sel = document.getElementById('target-currency');
-        if (sel.options.length === 0) {
-            rates.forEach(r => {
-                let opt = document.createElement('option');
-                opt.value = r.to_currency; opt.text = `${r.to_currency} - Exchange`;
-                sel.add(opt);
-            });
+        async function req(path, method = 'GET', body = null) {
+            const opt = { method, headers: {'Content-Type': 'application/json'}, credentials: 'include' };
+            if(body) opt.body = JSON.stringify(body);
+            return fetch(`${API_BASE}${path}`, opt);
         }
 
-        // 3. Update History
-        const hRes = await request('/api/history');
-        const history = await hRes.json();
-        document.getElementById('history-rows').innerHTML = history.map(h => `
-            <tr>
-                <td>${new Date(h.created_at).toLocaleTimeString()}</td>
-                <td>${h.from_currency} → ${h.to_currency}</td>
-                <td>${parseFloat(h.amount).toFixed(2)}</td>
-                <td class="green">+${parseFloat(h.converted_amount).toFixed(2)}</td>
-                <td>${parseFloat(h.rate).toFixed(4)}</td>
-            </tr>
-        `).join('');
-    }
+        function toggleAuth() { isLogin = !isLogin; document.getElementById('auth-title').innerText = isLogin ? "Login" : "Register"; }
 
-    function updateChart(newRate) {
-        const time = new Date().toLocaleTimeString();
-        if (!chart) {
-            const ctx = document.getElementById('mainChart').getContext('2d');
-            chart = new Chart(ctx, {
-                type: 'line',
-                data: { labels: [time], datasets: [{ 
-                    label: 'Market Rate', data: [newRate], 
-                    borderColor: '#00e676', backgroundColor: 'rgba(0, 230, 118, 0.1)', fill: true, tension: 0.4 
-                }]},
-                options: { responsive: true, plugins: { legend: { display: false } } }
-            });
-        } else {
-            if (chart.data.labels.length > 15) { chart.data.labels.shift(); chart.data.datasets[0].data.shift(); }
-            chart.data.labels.push(time);
-            chart.data.datasets[0].data.push(newRate);
+        async function handleAuth() {
+            const u = document.getElementById('username').value, p = document.getElementById('password').value;
+            const path = isLogin ? '/api/auth/login' : '/api/auth/register';
+            const res = await req(path, 'POST', {username: u, password: p});
+            if(res.ok) { if(!isLogin) toggleAuth(); else checkSession(); }
+            else alert("Error in Auth");
+        }
+
+        async function checkSession() {
+            const res = await req('/api/auth/me');
+            if(res.ok) {
+                const data = await res.json();
+                document.getElementById('user-display').innerText = data.username;
+                document.getElementById('auth-view').classList.add('hidden');
+                document.getElementById('app-view').classList.remove('hidden');
+                initApp();
+            }
+        }
+
+        function initApp() {
+            updateData();
+            initChart();
+            setInterval(updateData, 5000);
+        }
+
+        async function updateData() {
+            const [wRes, rRes, hRes] = await Promise.all([req('/api/wallet'), req('/api/rates'), req('/api/history')]);
+            if(wRes.ok) {
+                const wallets = await wRes.json();
+                document.getElementById('wallet-list').innerHTML = wallets.map(w => `<div class="wallet-card"><span>${w.flag} ${w.currency_code}</span><span>${parseFloat(w.balance).toFixed(2)}</span></div>`).join('');
+            }
+            if(rRes.ok) {
+                const rates = await rRes.json();
+                updateChart(rates[0].rate);
+                const sel = document.getElementById('target-curr');
+                if(sel.options.length === 0) {
+                    rates.forEach(r => { let o = document.createElement('option'); o.value = r.to_currency; o.text = r.to_currency; sel.add(o); });
+                }
+            }
+            if(hRes.ok) {
+                const history = await hRes.json();
+                document.getElementById('history-list').innerHTML = history.map(h => `<tr><td>${h.created_at}</td><td>${h.from_currency}➜${h.to_currency}</td><td>${parseFloat(h.amount).toFixed(2)}</td><td>+${parseFloat(h.converted_amount).toFixed(2)}</td><td>${parseFloat(h.rate).toFixed(4)}</td></tr>`).join('');
+            }
+        }
+
+        async function executeTrade() {
+            const to = document.getElementById('target-curr').value, amt = document.getElementById('trade-amt').value;
+            const res = await req('/api/trade', 'POST', {from: 'USD', to, amount: amt});
+            if(res.ok) updateData(); else alert("Trade Failed");
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('marketChart').getContext('2d');
+            chart = new Chart(ctx, { type: 'line', data: { labels: [], datasets: [{ data: [], borderColor: '#00e676', tension: 0.4, fill: true, backgroundColor: 'rgba(0,230,118,0.1)' }] }, options: { plugins: { legend: { display: false } }, scales: { x: { display: false } } } });
+        }
+
+        function updateChart(val) {
+            chart.data.labels.push("");
+            chart.data.datasets[0].data.push(val);
+            if(chart.data.labels.length > 20) { chart.data.labels.shift(); chart.data.datasets[0].data.shift(); }
             chart.update();
         }
-    }
 
-    async function executeTrade(type) {
-        const amount = document.getElementById('trade-amount').value;
-        const to = document.getElementById('target-currency').value;
-        const res = await request('/api/trade', 'POST', { from: 'USD', to, amount });
-        if (res.ok) alert("Transaction Confirmed");
-        else alert("Transaction Failed");
-        updateDashboard();
-    }
-
-    async function logout() { await request('/api/auth/logout', 'POST'); location.reload(); }
-
-    init();
-</script>
+        async function logout() { await req('/api/auth/logout', 'POST'); location.reload(); }
+        checkSession();
+    </script>
 </body>
 </html>
